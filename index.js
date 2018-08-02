@@ -50,7 +50,7 @@ wsServer.on('request', function(request)
 
     connection.on('message', function(message) {
         if (message.type === 'utf8') {
-        	const parsed = JSON.parse(message.utf8Data);
+            const parsed = JSON.parse(message.utf8Data);
             console.log('Received Message: ' + parsed.message);
             connection.sendUTF(JSON.stringify({message: "Received a message."}));
         }

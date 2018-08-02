@@ -1,4 +1,4 @@
-var url = "ws://" + document.URL.substr(7).split('/')[0];
+var url = "ws://" + window.location.host;
     
 var WebSocket = window['MozWebSocket'] ? MozWebSocket : WebSocket;
 var socket = new WebSocket(url, 'pc-audience');
@@ -6,6 +6,7 @@ var socket = new WebSocket(url, 'pc-audience');
 socket.onmessage = function (message)
 {
     console.log(message);
+    pcSynth.playNote();
     document.getElementById("messages").innerHTML += "<div> - " + JSON.parse(message.data).message + "</div>";
 };
 
