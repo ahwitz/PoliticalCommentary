@@ -1,0 +1,35 @@
+{
+  "name": "surprisingly-not-political-commentary",
+  "version": "0.0.1",
+  "description": "This plays a specifically non-specific piece of music",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "start-mon": "node_modules/.bin/nodemon index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ahwitz/PoliticalCommentary.git"
+  },
+  "keywords": [
+    "you",
+    "shouldn't",
+    "find",
+    "this",
+    "on",
+    "your",
+    "own"
+  ],
+  "author": "Andrew Horwitz",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ahwitz/PoliticalCommentary/issues"
+  },
+  "homepage": "https://github.com/ahwitz/PoliticalCommentary#readme",
+  "dependencies": {
+    "express": "^4.16.3"
+  },
+  "devDependencies": {
+    "nodemon": "^1.18.3"
+  }
+}
