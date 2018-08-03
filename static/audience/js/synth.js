@@ -6,13 +6,13 @@ function PCSynth ()
     masterGainNode.connect(audioContext.destination);
     masterGainNode.gain.value = 0.1;
 
-    this.playNote = function ()
+    this.playNote = function (freq)
     {
         var osc = audioContext.createOscillator();
         osc.connect(masterGainNode);
         osc.type = 'sawtooth'; // [square, sawtooth, triangle, custom?]
 
-        osc.frequency.value = 440;
+        osc.frequency.value = freq;
         osc.start();
 
         window.setTimeout(function()

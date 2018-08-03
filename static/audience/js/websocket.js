@@ -5,9 +5,10 @@ var socket = new WebSocket(url, 'pc-audience');
 
 socket.onmessage = function (message)
 {
+	message = JSON.parse(message.data);
     console.log(message);
-    pcSynth.playNote();
-    document.getElementById("messages").innerHTML += "<div> - " + JSON.parse(message.data).message + "</div>";
+    pcSynth.playNote(message.freq);
+    document.getElementById("messages").innerHTML += "<div> - received freq: " + message.freq + "</div>";
 };
 
 document.getElementById("talk").addEventListener("click", function()
