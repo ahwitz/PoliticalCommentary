@@ -1,1 +1,13 @@
+#stage-two.loading #loading-message {
+    margin: 1em;
+    font-weight: bold;
+    font-size: 1.2em;
+}
 
+#stage-two.loading #sliders {
+    display: none;
+}
+
+#stage-two:not(.loading) #loading-message {
+    display: none;
+}

@@ -27,7 +27,8 @@
   },
   "homepage": "https://github.com/ahwitz/PoliticalCommentary#readme",
   "dependencies": {
-    "express": "^4.16.3"
+    "express": "^4.16.3",
+    "ws": "^6.0.0"
   },
   "devDependencies": {
     "nodemon": "^1.18.3"

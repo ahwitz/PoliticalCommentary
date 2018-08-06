@@ -2,91 +2,130 @@
 * Create WebSocket server for live interaction
 */
 
-const WebSocketServer = require('websocket').server;
-const WebSocketRouter = require('websocket').router;
+const WebSocket = require('ws');
 
-module.exports.WSServer = function(httpServer)
+function PowerHistoryTracker(performerConn)
 {
-    const wsServer = new WebSocketServer({
-      httpServer: httpServer,
-      autoAcceptConnections: false
-    });
+    this.performerConn = performerConn;
 
-    const router = new WebSocketRouter();
-    router.attachServer(wsServer);
+    let programTotal = 0;
 
-    function originIsAllowed(origin) {
-        // TODO: logic to determine whether something can request?
-        return true;
+    this.updateWith = function(index, clientTotal)
+    {
+        programTotal += clientTotal;
+
+        console.log('sending totalUpdate with', programTotal);
+        performerConn.ws.send(JSON.stringify({
+            type: 'total-update',
+            data: {
+                programTotal,
+                clientTotal,
+                index
+            }
+        }))
     }
 
+}
+
+module.exports.WSServer = function(url, httpServer)
+{
     const clientConnections = [];
     let performerConnection;
 
-    let overallPower = 0;
+    // To be assigned to an instance of PowerHistoryTracker when the performer connects
+    let overallPower;
 
-    router.mount('*', 'pc-audience', function(request)
-    {
-        // Variables local to this user
-        const clientConnection = request.accept(request.origin);
-        const powerHistory = [];
+    const wsServer = new WebSocket.Server({
+        server: httpServer
+    });
 
-        // Push them in the array to be accessible
-        const index = clientConnections.push({
-            connection: clientConnection,
-            powerHistory: []
-        });
-
-        console.log((new Date()) + ' client added at ' + clientConnection.remoteAddress);
-
-        clientConnection.on('message', function(message)
+    wsServer.on('connection', (ws, req) => {
+        if (ws.protocol === 'pc-performer')
         {
-            if (message.type !== 'utf8') return;
+            // If the performer already exists, close this
+            if (performerConnection) return ws.close();
+            
+            // Otherwise save
+            performerConnection = new pcPerformer(ws, req);
+            overallPower = new PowerHistoryTracker(performerConnection);
+        }
+        else if (ws.protocol === 'pc-audience')
+        {
+            // If the performer doesn't exist, close
+            if (!performerConnection) return ws.close();
 
-            const parsed = JSON.parse(message.utf8Data);
+            const clientConnection = new pcAudience(ws, req, overallPower);
 
-            if (parsed.type === 'power')
-            {
-                const action = parsed.data.action;
-                const order = parsed.data.order;
+            // Push them in the array to be accessible
+            const index = clientConnections.push(clientConnection);
+            clientConnection.identify(index);
 
-                let power = action * order;
-                console.log("Power:", power);
-                powerHistory.push(power);
-
-                if (powerHistory.length >= 10)
-                {
-                    overallPower += powerHistory.reduce((total, num) => total + num) / powerHistory.length;
-                    powerHistory.splice(0);
-
-                    console.log("Overall:", overallPower);
+            performerConnection.ws.send(JSON.stringify({
+                type: 'new-client',
+                data: {
+                    index: index
                 }
-            }
-            // clientConnection.sendUTF(JSON.stringify({message: "Received a message."}));
-        });
+            }));
+        }
+        else ws.close();
     });
+};
 
-    router.mount('*', 'pc-performer', function(request)
-    {
-        if (performerConnection) return;
+function pcPerformer(ws, req, powerTracker)
+{
+    console.log((new Date()) + ' performer acknowledged at ' + req.connection.remoteAddress);
+    this.ws = ws;
 
-        performerConnection = request.accept(request.origin);
-        console.log((new Date()) + ' performer acknowledged at ' + performerConnection.remoteAddress);
-        
-        performerConnection.on('message', function(message)
+    ws.on('message', (message) => {
+        if (message.type !== 'utf8') return;
+
+        const parsed = JSON.parse(message.utf8Data);
+        console.log('Received frequency: ' + message.utf8Data);
+        for (const conn of clientConnections)
+            conn.ws.send(JSON.stringify({freq: parsed.freq}));
+    });
+};
+
+function pcAudience(ws, req, powerTracker)
+{
+    console.log((new Date()) + ' client added at ' + req.connection.remoteAddress);
+
+    // Variables needed by this object
+    this.ws = ws;
+    let index;
+    const powerHistory = [];
+
+    // WS message handler
+    ws.on('message', (message) => {
+        const parsed = JSON.parse(message);
+        if (!parsed) return;
+
+        if (parsed.type === 'power')
         {
-            if (message.type === 'utf8') {
-                const parsed = JSON.parse(message.utf8Data);
-                console.log('Received frequency: ' + message.utf8Data);
-                for (const conn of clientConnections)
-                    conn.sendUTF(JSON.stringify({freq: parsed.freq}));
+            const action = parsed.data.action;
+            const order = parsed.data.order;
+
+            let power = action * order;
+            powerHistory.push(power);
+
+            if (powerHistory.length >= 2)
+            {
+                const runningAverage = powerHistory.reduce((total, num) => total + num) / powerHistory.length;
+                powerTracker.updateWith(index, runningAverage);
+                powerHistory.splice(0);
             }
-            else if (message.type === 'binary') {
-                console.log('Received Binary Message of ' + message.binaryData.length + ' bytes');
-                performerConn.sendBytes(message.binaryData);
-            }
-        });
+        }
     });
 
-    return wsServer;
+    // Sends a note to the client to acknowledge its index
+    this.identify = function(indexIn)
+    {
+        index = indexIn;
+        this.ws.send(JSON.stringify({
+            type: 'accept',
+            data: {
+                index: indexIn
+            }
+        }));
+    }
 };
