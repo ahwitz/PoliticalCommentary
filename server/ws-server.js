@@ -23,24 +23,46 @@ module.exports.WSServer = function(httpServer)
     const clientConnections = [];
     let performerConnection;
 
+    let overallPower = 0;
+
     router.mount('*', 'pc-audience', function(request)
     {
+        // Variables local to this user
         const clientConnection = request.accept(request.origin);
-        clientConnections.push(clientConnection);
+        const powerHistory = [];
+
+        // Push them in the array to be accessible
+        const index = clientConnections.push({
+            connection: clientConnection,
+            powerHistory: []
+        });
 
         console.log((new Date()) + ' client added at ' + clientConnection.remoteAddress);
 
         clientConnection.on('message', function(message)
         {
-            if (message.type === 'utf8') {
-                const parsed = JSON.parse(message.utf8Data);
-                console.log('Received Message: ' + parsed.message);
-                clientConnection.sendUTF(JSON.stringify({message: "Received a message."}));
+            if (message.type !== 'utf8') return;
+
+            const parsed = JSON.parse(message.utf8Data);
+
+            if (parsed.type === 'power')
+            {
+                const action = parsed.data.action;
+                const order = parsed.data.order;
+
+                let power = action * order;
+                console.log("Power:", power);
+                powerHistory.push(power);
+
+                if (powerHistory.length >= 10)
+                {
+                    overallPower += powerHistory.reduce((total, num) => total + num) / powerHistory.length;
+                    powerHistory.splice(0);
+
+                    console.log("Overall:", overallPower);
+                }
             }
-            else if (message.type === 'binary') {
-                console.log('Received Binary Message of ' + message.binaryData.length + ' bytes');
-                clientConnection.sendBytes(message.binaryData);
-            }
+            // clientConnection.sendUTF(JSON.stringify({message: "Received a message."}));
         });
     });
 

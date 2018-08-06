@@ -3,13 +3,27 @@
 <head>
     <meta charset="utf-8">
     <title>Political Commentary. Definitely.</title>
+    <link rel="stylesheet" href="/css/audience.css"/>
 </head>
 <body>
-	<div>
-		Ongoing test.
-		<button id="talk">Poke the server</button>
+	<div id="stage-two">
+		<div class="sliders">
+			<div class="slider">
+				<span class="slider-title slider-title-top">Apathy</span>
+				<span class="slider-wrapper">
+					<input id="action-slider" type="range" min="0" max="1" step="0.001" value="0" data-orientation="vertical"/>
+				</span>
+				<span class="slider-title slider-title-bottom">Action</span>
+			</div>
+			<div class="slider">
+				<span class="slider-title slider-title-top">Order</span>
+				<span class="slider-wrapper">
+					<input id="order-slider" type="range" min="-1" max="1" step="0.001" value="0" data-orientation="vertical"/>
+				</span>
+				<span class="slider-title slider-title-bottom">Anarchy</span>
+			</div>
+		</div>
 	</div>
-	<div id="messages"></div>
 
     <script type="text/javascript" src="/js/synth.js"></script>
     <script type="text/javascript" src="/js/websocket.js"></script>
