@@ -15,16 +15,17 @@ socket.onmessage = function (message)
 {
     message = JSON.parse(message.data);
 
-    // Set up
+    // Set up message sent by server
     if (message.type === 'accept')
     {
         message.data.index = index;
         stageTwo.classList.remove("loading");
 
-            console.log('setting interval');
+        // todo: set a cookie to save index in case of reload
+        // todo: pass stage
+
         powerInterval = window.setInterval(function()
         {
-            console.log('interval');
             socket.send(JSON.stringify({
                 type: 'power',
                 data: {
@@ -36,8 +37,13 @@ socket.onmessage = function (message)
     }
 };
 
+// Cleanup
 socket.onclose = function ()
 {
-    if (!index) document.getElementById("loading-message").innerHTML = "The performance has not yet started. Please reload later.";
-    if (powerInterval) window.clearInterval(powerInterval);
+    // If the `accept` message was never sent, this is quick
+    if (!index) return document.getElementById("loading-message").innerHTML = "The performance has not yet started.";
+
+    // Otherwise:
+    window.clearInterval(powerInterval);
+    stageTwo.innerHTML = "The performance is complete.";
 }
