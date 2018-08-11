@@ -4,17 +4,20 @@
 
 const WebSocket = require('ws');
 
-function PowerHistoryTracker(performerConn)
+function ConfigTracker(clientConnections)
 {
-    this.performerConn = performerConn;
+    this.activePitches = [];
+    this.performerConn;
+    this.clientConnections = clientConnections;
 
     let programTotal = 0;
 
-    this.updateWith = function(index, clientTotal)
+    this.setPerformer = performerConn => this.performerConn = performerConn;
+
+    this.updatePowerWith = function(index, clientTotal)
     {
         programTotal += clientTotal;
 
-        console.log('sending totalUpdate with', programTotal);
         performerConn.ws.send(JSON.stringify({
             type: 'total-update',
             data: {
@@ -22,9 +25,20 @@ function PowerHistoryTracker(performerConn)
                 clientTotal,
                 index
             }
-        }))
+        }));
     }
 
+    this.updatePitchesTo = function(pitches)
+    {
+        this.activePitches = pitches;
+        for (var client of clientConnections)
+        {
+            client.ws.send(JSON.stringify({
+                type: 'pitches',
+                data: this.activePitches
+            }));
+        }
+    }
 }
 
 module.exports.WSServer = function(url, httpServer)
@@ -33,7 +47,7 @@ module.exports.WSServer = function(url, httpServer)
     let performerConnection;
 
     // To be assigned to an instance of PowerHistoryTracker when the performer connects
-    let overallPower;
+    let configTracker;
 
     const wsServer = new WebSocket.Server({
         server: httpServer
@@ -46,15 +60,16 @@ module.exports.WSServer = function(url, httpServer)
             if (performerConnection) return ws.close();
             
             // Otherwise save
-            performerConnection = new pcPerformer(ws, req);
-            overallPower = new PowerHistoryTracker(performerConnection);
+            configTracker = new ConfigTracker(clientConnections);
+            performerConnection = new pcPerformer(ws, req, configTracker);
+            configTracker.setPerformer(performerConnection);
         }
         else if (ws.protocol === 'pc-audience')
         {
             // If the performer doesn't exist, close
             if (!performerConnection) return ws.close();
 
-            const clientConnection = new pcAudience(ws, req, overallPower);
+            const clientConnection = new pcAudience(ws, req, configTracker);
 
             // Push them in the array to be accessible
             const index = clientConnections.push(clientConnection);
@@ -71,22 +86,23 @@ module.exports.WSServer = function(url, httpServer)
     });
 };
 
-function pcPerformer(ws, req, powerTracker)
+function pcPerformer(ws, req, configTracker)
 {
     console.log((new Date()) + ' performer acknowledged at ' + req.connection.remoteAddress);
     this.ws = ws;
 
     ws.on('message', (message) => {
-        if (message.type !== 'utf8') return;
+        const parsed = JSON.parse(message);
+        if (!parsed) return;
 
-        const parsed = JSON.parse(message.utf8Data);
-        console.log('Received frequency: ' + message.utf8Data);
-        for (const conn of clientConnections)
-            conn.ws.send(JSON.stringify({freq: parsed.freq}));
+        if (parsed.type === 'pitches')
+        {
+            configTracker.updatePitchesTo(parsed.data);
+        }
     });
 };
 
-function pcAudience(ws, req, powerTracker)
+function pcAudience(ws, req, configTracker)
 {
     console.log((new Date()) + ' client added at ' + req.connection.remoteAddress);
 
@@ -111,7 +127,7 @@ function pcAudience(ws, req, powerTracker)
             if (powerHistory.length >= 2)
             {
                 const runningAverage = powerHistory.reduce((total, num) => total + num) / powerHistory.length;
-                powerTracker.updateWith(index, runningAverage);
+                configTracker.updatePowerWith(index, runningAverage);
                 powerHistory.splice(0);
             }
         }

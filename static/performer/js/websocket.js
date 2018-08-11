@@ -7,10 +7,22 @@ socket.onmessage = function (message)
 {
 };
 
-document.getElementById("talk").addEventListener("click", function()
+var inputs = document.getElementsByClassName("pitch-input");
+for (var iIdx = 0; iIdx < inputs.length; iIdx++)
 {
-	var freq = document.getElementById("freq-input").value;
-    socket.send(JSON.stringify({
-        freq: freq
-    }));
-});
+    inputs[iIdx].addEventListener("change", function(e)
+    {
+        var target = e.target;
+        var newValue = target.value;
+        target.nextSibling.textContent = newValue;
+
+        var values = [];
+        for (var iIdx = 0; iIdx < inputs.length; iIdx++)
+            values.push(inputs[iIdx].value);
+
+        socket.send(JSON.stringify({
+            type: 'pitches',
+            data: values
+        }));
+    });
+}

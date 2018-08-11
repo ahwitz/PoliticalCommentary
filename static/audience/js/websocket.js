@@ -3,7 +3,7 @@ var url = "ws://" + window.location.host;
 var WebSocket = window['MozWebSocket'] ? MozWebSocket : WebSocket;
 var socket = new WebSocket(url, 'pc-audience');
 
-// Things set when initialized
+// Things set on the 'accept' message initialization
 var index, powerInterval;
 
 // DOM elements
@@ -18,22 +18,11 @@ socket.onmessage = function (message)
     // Set up message sent by server
     if (message.type === 'accept')
     {
-        message.data.index = index;
         stageTwo.classList.remove("loading");
-
-        // todo: set a cookie to save index in case of reload
-        // todo: pass stage
-
-        powerInterval = window.setInterval(function()
-        {
-            socket.send(JSON.stringify({
-                type: 'power',
-                data: {
-                    action: actionSlider.value,
-                    order: orderSlider.value,
-                }
-            }));
-        }, 1000);
+    }
+    if (message.type === 'pitches')
+    {
+        pcSynth.setPitches(message.data);
     }
 };
 

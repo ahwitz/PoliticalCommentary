@@ -20,6 +20,11 @@ function PCSynth ()
             osc.stop();
         }, 1000)
     }
+
+    this.setPitches = function(pitches)
+    {
+        document.getElementById("pitches").innerHTML = pitches.join(", ");
+    }
 }
 
 var pcSynth = new PCSynth();
