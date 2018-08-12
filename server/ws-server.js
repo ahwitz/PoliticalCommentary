@@ -14,6 +14,21 @@ function ConfigTracker(clientConnections)
 
     this.setPerformer = performerConn => this.performerConn = performerConn;
 
+    // Removes expired clients from the clientConnections arr
+    this.checkClients = function()
+    {
+        const toSplice = [];
+        for (let cIdx = 0; cIdx < clientConnections.length; cIdx++)
+        {
+            if (clientConnections[cIdx].ws.readyState === 3)
+                toSplice.push(cIdx);
+        }
+
+        // remove them in reverse so that indexes are stable
+        for (let cIdx of toSplice.reverse())
+            clientConnections.splice(cIdx, 1);
+    }
+
     this.updatePowerWith = function(index, clientTotal)
     {
         programTotal += clientTotal;
@@ -30,6 +45,7 @@ function ConfigTracker(clientConnections)
 
     this.updatePitchesTo = function(pitches)
     {
+        this.checkClients();
         this.activePitches = pitches;
         for (var client of clientConnections)
         {

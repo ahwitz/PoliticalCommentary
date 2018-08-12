@@ -1,29 +1,39 @@
 function PCSynth ()
 {
+    var oscillators = [];
     var audioContext = new (window.AudioContext || window.webkitAudioContext);
 
     var masterGainNode = audioContext.createGain();
     masterGainNode.connect(audioContext.destination);
     masterGainNode.gain.value = 0.1;
 
-    this.playNote = function (freq)
+    this.setPitches = function(newPitches)
     {
-        var osc = audioContext.createOscillator();
-        osc.connect(masterGainNode);
-        osc.type = 'sawtooth'; // [square, sawtooth, triangle, custom?]
-
-        osc.frequency.value = freq;
-        osc.start();
-
-        window.setTimeout(function()
+        for (var i = 0; i < 4; i++)
         {
-            osc.stop();
-        }, 1000)
-    }
+            var newPitch = newPitches[i];
+            var osc = oscillators[i];
+            if (osc && !newPitch)
+            {
+                osc.stop();
+                delete oscillators[i];
+                continue;
+            }
 
-    this.setPitches = function(pitches)
-    {
-        document.getElementById("pitches").innerHTML = pitches.join(", ");
+            if (!osc)
+            {
+                osc = audioContext.createOscillator();
+                osc.connect(masterGainNode);
+                osc.type = 'square'; // [square, sawtooth, triangle, custom?]
+                osc.start();
+
+                oscillators[i] = osc;
+            }
+
+            osc.frequency.value = newPitch;
+        }
+
+        document.getElementById("pitches").innerHTML = newPitches.join(", ");
     }
 }
 
