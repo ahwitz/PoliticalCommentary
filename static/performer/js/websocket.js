@@ -5,6 +5,21 @@ var socket = new WebSocket(url, 'pc-performer');
 
 socket.onmessage = function (message)
 {
+    message = JSON.parse(message.data);
+
+    // Set up message sent by server
+    if (message.type === 'total-update')
+    {
+        document.getElementById("running-power").textContent = message.data.programTotal;
+
+        var htmlToAdd = "";
+        for (var cIdx in message.data.clients)
+        {
+            htmlToAdd += "<div>Client " + cIdx + ": " + message.data.clients[cIdx] + "</div>";
+        }
+
+        document.getElementById("client-wrapper").innerHTML = htmlToAdd;
+    }
 };
 
 var inputs = document.getElementsByClassName("pitch-input");

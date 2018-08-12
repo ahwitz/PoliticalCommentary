@@ -5,7 +5,18 @@ function PCSynth ()
 
     var masterGainNode = audioContext.createGain();
     masterGainNode.connect(audioContext.destination);
-    masterGainNode.gain.value = 0.1;
+    masterGainNode.gain.value = 0.01;
+
+    this.updatePower = function()
+    {
+        socket.send(JSON.stringify({
+            type: 'power',
+            data: {
+                action: actionSlider.value,
+                order: orderSlider.value,
+            }
+        }));
+    }
 
     this.setPitches = function(newPitches)
     {

@@ -10,45 +10,36 @@ function ConfigTracker(clientConnections)
     this.performerConn;
     this.clientConnections = clientConnections;
 
-    let programTotal = 0;
-
     this.setPerformer = performerConn => this.performerConn = performerConn;
 
-    // Removes expired clients from the clientConnections arr
-    this.checkClients = function()
+    this.updatePower = function()
     {
-        const toSplice = [];
-        for (let cIdx = 0; cIdx < clientConnections.length; cIdx++)
+        if (!this.performerConn || this.performerConn.ws.readyState === 3) return;
+
+        let clients = {};
+        let programTotal = 0;
+        for (const client of this.clientConnections)
         {
-            if (clientConnections[cIdx].ws.readyState === 3)
-                toSplice.push(cIdx);
+            clients[client.index] = client.runningAverage;
+            programTotal += client.runningAverage;
         }
 
-        // remove them in reverse so that indexes are stable
-        for (let cIdx of toSplice.reverse())
-            clientConnections.splice(cIdx, 1);
-    }
-
-    this.updatePowerWith = function(index, clientTotal)
-    {
-        programTotal += clientTotal;
-
-        performerConn.ws.send(JSON.stringify({
+        this.performerConn.ws.send(JSON.stringify({
             type: 'total-update',
             data: {
-                programTotal,
-                clientTotal,
-                index
+                clients,
+                programTotal
             }
         }));
     }
 
     this.updatePitchesTo = function(pitches)
     {
-        this.checkClients();
         this.activePitches = pitches;
         for (var client of clientConnections)
         {
+            if (client.ws.readyState === 3) continue;
+
             client.ws.send(JSON.stringify({
                 type: 'pitches',
                 data: this.activePitches
@@ -124,7 +115,8 @@ function pcAudience(ws, req, configTracker)
 
     // Variables needed by this object
     this.ws = ws;
-    let index;
+    this.runningAverage = 0;
+    this.index;
     const powerHistory = [];
 
     // WS message handler
@@ -142,8 +134,8 @@ function pcAudience(ws, req, configTracker)
 
             if (powerHistory.length >= 2)
             {
-                const runningAverage = powerHistory.reduce((total, num) => total + num) / powerHistory.length;
-                configTracker.updatePowerWith(index, runningAverage);
+                this.runningAverage += powerHistory.reduce((total, num) => total + num) / powerHistory.length;
+                configTracker.updatePower();
                 powerHistory.splice(0);
             }
         }
@@ -152,7 +144,7 @@ function pcAudience(ws, req, configTracker)
     // Sends a note to the client to acknowledge its index
     this.identify = function(indexIn)
     {
-        index = indexIn;
+        this.index = indexIn;
         this.ws.send(JSON.stringify({
             type: 'accept',
             data: {

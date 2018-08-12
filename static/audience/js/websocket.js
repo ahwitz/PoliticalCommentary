@@ -19,6 +19,9 @@ socket.onmessage = function (message)
     if (message.type === 'accept')
     {
         stageTwo.classList.remove("loading");
+
+        index = message.data.index;
+        powerInterval = window.setInterval(pcSynth.updatePower, 1000);
     }
     if (message.type === 'pitches')
     {
