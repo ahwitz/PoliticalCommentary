@@ -37,5 +37,6 @@ socket.onclose = function ()
 
     // Otherwise:
     window.clearInterval(powerInterval);
+    pcSynth.end();
     stageTwo.innerHTML = "The performance is complete.";
 }
