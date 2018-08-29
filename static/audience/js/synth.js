@@ -11,7 +11,8 @@ function pitchController(synthRef)
 
     this.end = function()
     {
-        this.osc.stop();
+        if (this.osc)
+            this.osc.stop();
     };
 
     this.updatePitch = function(pitch)

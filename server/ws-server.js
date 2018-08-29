@@ -148,7 +148,8 @@ function pcAudience(ws, req, configTracker)
         this.ws.send(JSON.stringify({
             type: 'accept',
             data: {
-                index: indexIn
+                index: indexIn,
+                pitches: configTracker.activePitches
             }
         }));
     }

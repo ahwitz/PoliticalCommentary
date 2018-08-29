@@ -22,6 +22,7 @@ socket.onmessage = function (message)
 
         index = message.data.index;
         powerInterval = window.setInterval(pcSynth.updatePower, 1000);
+        pcSynth.setPitches(message.data.pitches);
     }
     if (message.type === 'pitches')
     {
