@@ -74,6 +74,7 @@ module.exports.WSServer = function(url, httpServer)
             // If a close comes through for this, reset it
             ws.on('close', () => {
                 performerConnection = null;
+                configTracker.activePitches = [];
             });
         }
         else if (ws.protocol === 'pc-audience')
