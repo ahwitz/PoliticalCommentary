@@ -8,8 +8,6 @@ var index, powerInterval;
 
 // DOM elements
 var stageTwo = document.getElementById("stage-two");
-var actionSlider = document.getElementById("action-slider");
-var orderSlider = document.getElementById("order-slider");
 
 socket.onmessage = function (message)
 {
@@ -21,7 +19,7 @@ socket.onmessage = function (message)
         stageTwo.classList.remove("loading");
 
         index = message.data.index;
-        powerInterval = window.setInterval(pcSynth.updatePower, 1000);
+        powerInterval = window.setInterval(pcSynth.updatePower.bind(pcSynth), 1000);
         if (message.data.pitches && message.data.pitches.length > 0)
             pcSynth.setPitches(message.data.pitches);
     }

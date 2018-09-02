@@ -1,5 +1,18 @@
 function pitchController(synthRef)
 {
+    // Preferences
+    var minMaxGainVolume = 0.02;
+    var maxMaxGainVolume = 0.05;
+
+    var minPitchDifference = 0;
+    var maxPitchDifference = 60;
+
+    var minDuration = 2;
+    var maxDuration = 6;
+
+    var minSilenceDuration = 2;
+    var maxSilenceDuration = 4;
+
     // WebAudio stuff
     this.osc;
     this.gain;
@@ -7,12 +20,12 @@ function pitchController(synthRef)
     this.context = this.synth.audioContext;
 
     // Volume controls
-    var maxGainVolume = 0.05;
     this.gain = this.context.createGain();
     this.gain.connect(this.context.destination);
     this.gain.gain.value = 0;
 
     // Pitch-playing information
+    this.centralPitch;
     this.pitchInterval;
     this.pitchObj;
 
@@ -24,10 +37,14 @@ function pitchController(synthRef)
 
     this.setPitch = function(pitch)
     {
-        if (this.osc && !pitch)
+        if (!pitch)
         {
-            this.osc.stop();
-            delete this.osc;
+            if (this.osc)
+            {
+                this.osc.stop();
+                delete this.osc;
+            }
+
             return;
         }
 
@@ -39,26 +56,36 @@ function pitchController(synthRef)
             this.osc.start();
         }
 
-        this.osc.frequency.value = pitch;
+        this.centralPitch = parseInt(pitch, 10);
         this.playPitch();
     };
 
     this.playPitch = function()
     {
-        if (!this.osc.frequency.value) return;
+        if (!this.osc || !this.osc.frequency.value) return;
+
+        // Get the slider values, out of 1
+        var actionValue = 1 - this.synth.getActionValue();
+        var orderValue = (this.synth.getOrderValue() + 1) / 2;
+
+        var localDurationBase = ((maxDuration - minDuration) * actionValue);
+        var localPitchDifference = ((maxPitchDifference - minPitchDifference) * orderValue);
+
         // Generate the config object for the current pitch
-        var duration = Math.random() * 5;
-        var pitch = ((Math.random() - 0.5) * 20) + this.osc.frequency.value;
+        var duration = minDuration + (Math.random() * localDurationBase);
+        var pitch = this.centralPitch + minPitchDifference + ((Math.random() - 0.5) * localPitchDifference);
 
         this.pitchObj = {
-            loudest: Math.random() * maxGainVolume,
+            loudest: Math.random() * maxMaxGainVolume,
             pitch: pitch,
             duration: duration,
             breakpoint: duration / 2,
             start: (new Date()).getTime()
         };
 
-        console.log("Creating a new pitch: loudest gain " + this.pitchObj.loudest + "; central pitch " + this.osc.frequency.value +
+        this.osc.frequency.value = pitch;
+
+        console.log("Creating a new pitch: loudest gain " + this.pitchObj.loudest + "; central pitch " + this.centralPitch +
             "; random pitch " + this.pitchObj.pitch + "; duration " + this.pitchObj.duration);
 
         // Set the interval to update the pitch volume
@@ -89,18 +116,22 @@ function pitchController(synthRef)
 
     this.endPitch = function()
     {
-        console.log("Ending pitch.");
+        // Calculate how long we'll be silent for
+        var actionValue = 1 - this.synth.getActionValue();
+        var localSilenceBase = ((maxSilenceDuration - minSilenceDuration) * actionValue);
+
+        var silenceDuration = minSilenceDuration + (Math.random() + localSilenceBase);
+
+        console.log("Ending pitch; silent for " + silenceDuration);
+
         window.clearInterval(this.pitchInterval);
-        this.playPitch();
+        window.setTimeout(this.playPitch.bind(this), silenceDuration * 1000);
     };
 }
 
 function PCSynth ()
 {
     this.audioContext = new (window.AudioContext || window.webkitAudioContext);
-
-    this.actionValue = 0;
-    this.orderValue = 0;
 
     this.controllers = [];
     for (var i = 0; i < 4; i++)
@@ -116,16 +147,23 @@ function PCSynth ()
         }
     };
 
+    this.getActionValue = function()
+    {
+        return document.getElementById("action-slider").value;
+    };
+
+    this.getOrderValue = function()
+    {
+        return document.getElementById("order-slider").value;
+    };
+
     this.updatePower = function()
     {
-        this.actionValue = actionSlider.value;
-        this.orderValue = orderSlider.value;
-
         socket.send(JSON.stringify({
             type: 'power',
             data: {
-                action: this.actionValue,
-                order: this.orderValue
+                action: this.getActionValue(),
+                order: this.getOrderValue()
             }
         }));
     };
