@@ -70,6 +70,11 @@ module.exports.WSServer = function(url, httpServer)
             configTracker = new ConfigTracker(clientConnections);
             performerConnection = new pcPerformer(ws, req, configTracker);
             configTracker.setPerformer(performerConnection);
+
+            // If a close comes through for this, reset it
+            ws.on('close', () => {
+                performerConnection = null;
+            });
         }
         else if (ws.protocol === 'pc-audience')
         {
