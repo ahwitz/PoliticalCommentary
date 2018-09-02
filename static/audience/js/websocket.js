@@ -1,10 +1,19 @@
-var url = "ws://" + window.location.host;
+var pcID;
+
+// If there's an ID already set, get it; otherwise, we'll get it later
+if (docCookies.getItem("pcid"))
+{
+    pcID = docCookies.getItem("pcid");
+    console.log("already set to", pcID);
+}
     
+// Connect
+var url = "ws://" + window.location.host;
 var WebSocket = window['MozWebSocket'] ? MozWebSocket : WebSocket;
 var socket = new WebSocket(url, 'pc-audience');
 
-// Things set on the 'accept' message initialization
-var index, powerInterval;
+// Other things set on the 'accept' message initialization
+var powerInterval;
 
 // DOM elements
 var stageTwo = document.getElementById("stage-two");
@@ -18,7 +27,9 @@ socket.onmessage = function (message)
     {
         stageTwo.classList.remove("loading");
 
-        index = message.data.index;
+        pcID = message.data.id;
+        docCookies.setItem("pcid", pcID);
+
         powerInterval = window.setInterval(pcSynth.updatePower.bind(pcSynth), 1000);
         if (message.data.pitches && message.data.pitches.length > 0)
             pcSynth.setPitches(message.data.pitches);
@@ -33,7 +44,7 @@ socket.onmessage = function (message)
 socket.onclose = function ()
 {
     // If the `accept` message was never sent, this is quick
-    if (!index) return document.getElementById("loading-message").innerHTML = "The performance has not yet started.";
+    if (!pcID) return document.getElementById("loading-message").innerHTML = "The performance has not yet started.";
 
     // Otherwise:
     window.clearInterval(powerInterval);

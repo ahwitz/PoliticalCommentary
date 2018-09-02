@@ -54,18 +54,20 @@ function pitchController(synthRef)
         var intPitch = parseInt(pitch, 10);
         if (intPitch === this.centralPitch) return;
 
-        // Create oscillator if necessary
+        // Cache the pitch, start the process
+        this.centralPitch = intPitch;
+
+        // Create oscillator/start pitch playing if necessary
+        // - if already created, pitch will reset on next scheduled playPitch
         if (!this.osc)
         {
             this.osc = this.context.createOscillator();
             this.osc.connect(this.gain);
             this.osc.type = 'square'; // [square, sawtooth, triangle, custom?]
             this.osc.start();
-        }
 
-        // Cache the pitch, start the process
-        this.centralPitch = intPitch;
-        this.playPitch();
+            this.playPitch();
+        }
     };
 
     this.playPitch = function()
@@ -160,12 +162,12 @@ function PCSynth ()
 
     this.getActionValue = function()
     {
-        return parseInt(document.getElementById("action-slider").value, 10);
+        return parseFloat(document.getElementById("action-slider").value);
     };
 
     this.getOrderValue = function()
     {
-        return parseInt(document.getElementById("order-slider").value, 10);
+        return parseFloat(document.getElementById("order-slider").value);
     };
 
     this.updatePower = function()

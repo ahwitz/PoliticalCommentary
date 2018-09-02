@@ -13,9 +13,9 @@ socket.onmessage = function (message)
         document.getElementById("running-power").textContent = message.data.programTotal;
 
         var htmlToAdd = "";
-        for (var cIdx in message.data.clients)
+        for (var clientID in message.data.clients)
         {
-            htmlToAdd += "<div>Client " + cIdx + ": " + message.data.clients[cIdx] + "</div>";
+            htmlToAdd += "<div>Client " + clientID + ": " + message.data.clients[clientID] + "</div>";
         }
 
         document.getElementById("client-wrapper").innerHTML = htmlToAdd;

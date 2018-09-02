@@ -3,6 +3,9 @@
 */
 
 const WebSocket = require('ws');
+const utils = require('./utils');
+
+// Because `ws` doesn't play nicely enough with Express
 
 function ConfigTracker(clientConnections)
 {
@@ -18,9 +21,10 @@ function ConfigTracker(clientConnections)
 
         let clients = {};
         let programTotal = 0;
-        for (const client of this.clientConnections)
+        for (const id in this.clientConnections)
         {
-            clients[client.index] = client.runningAverage;
+            const client = this.clientConnections[id];
+            clients[id] = client.runningAverage;
             programTotal += client.runningAverage;
         }
 
@@ -50,7 +54,7 @@ function ConfigTracker(clientConnections)
 
 module.exports.WSServer = function(url, httpServer)
 {
-    const clientConnections = [];
+    const clientConnections = {};
     let performerConnection;
 
     // To be assigned to an instance of PowerHistoryTracker when the performer connects
@@ -79,19 +83,35 @@ module.exports.WSServer = function(url, httpServer)
         }
         else if (ws.protocol === 'pc-audience')
         {
+            let pcID;
+
+            // If we're coming in with a pcID, save it
+            if (req.headers.cookie.indexOf("pcid") > -1)
+            {
+                pcID = req.headers.cookie.replace(new RegExp('(?:(?:^|.*;)\\s*pcid\\s*\\=\\s*([^;]*).*$)|^.*$'), '$1');
+
+                // Just in case of error somewhere
+                if (!pcID || (pcID === 'undefined'))
+                    pcID = utils.guid();
+            }
+            
+            // Otherwise, set a new one
+            else
+                pcID = utils.guid();
+
             // If the performer doesn't exist, close
             if (!performerConnection) return ws.close();
 
-            const clientConnection = new pcAudience(ws, req, configTracker);
+            const clientConnection = new pcAudience(ws, req, configTracker, pcID);
 
             // Push them in the array to be accessible
-            const index = clientConnections.push(clientConnection);
-            clientConnection.identify(index);
+            clientConnections[pcID] = clientConnection;
+            clientConnection.identify(pcID);
 
             performerConnection.ws.send(JSON.stringify({
                 type: 'new-client',
                 data: {
-                    index: index
+                    id: pcID
                 }
             }));
         }
@@ -115,14 +135,14 @@ function pcPerformer(ws, req, configTracker)
     });
 };
 
-function pcAudience(ws, req, configTracker)
+function pcAudience(ws, req, configTracker, id)
 {
     console.log((new Date()) + ' client added at ' + req.connection.remoteAddress);
 
     // Variables needed by this object
+    this.id = id;
     this.ws = ws;
     this.runningAverage = 0;
-    this.index;
     const powerHistory = [];
 
     // WS message handler
@@ -141,20 +161,21 @@ function pcAudience(ws, req, configTracker)
             if (powerHistory.length >= 2)
             {
                 this.runningAverage += powerHistory.reduce((total, num) => total + num) / powerHistory.length;
+
                 configTracker.updatePower();
                 powerHistory.splice(0);
             }
         }
     });
 
-    // Sends a note to the client to acknowledge its index
-    this.identify = function(indexIn)
+    // Sends a note to the client to acknowledge its id
+    this.identify = function(idIn)
     {
-        this.index = indexIn;
+        this.id = idIn;
         this.ws.send(JSON.stringify({
             type: 'accept',
             data: {
-                index: indexIn,
+                id: idIn,
                 pitches: configTracker.activePitches
             }
         }));
