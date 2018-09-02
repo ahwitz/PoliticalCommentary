@@ -94,7 +94,7 @@ module.exports.WSServer = function(url, httpServer)
                 if (!pcID || (pcID === 'undefined'))
                     pcID = utils.guid();
             }
-            
+
             // Otherwise, set a new one
             else
                 pcID = utils.guid();
@@ -102,10 +102,17 @@ module.exports.WSServer = function(url, httpServer)
             // If the performer doesn't exist, close
             if (!performerConnection) return ws.close();
 
-            const clientConnection = new pcAudience(ws, req, configTracker, pcID);
+            // If the pcID has been registered already, re-init the websocket
+            let clientConnection;
+            if (pcID in clientConnections)
+                clientConnections[pcID].initWS(ws, req);
 
-            // Push them in the array to be accessible
-            clientConnections[pcID] = clientConnection;
+            // Otherwise, create one
+            else
+                clientConnections[pcID] = new pcAudience(ws, req, configTracker, pcID);
+
+            // Identify and register the ID
+            clientConnection = clientConnections[pcID];
             clientConnection.identify(pcID);
 
             performerConnection.ws.send(JSON.stringify({
@@ -137,16 +144,13 @@ function pcPerformer(ws, req, configTracker)
 
 function pcAudience(ws, req, configTracker, id)
 {
-    console.log((new Date()) + ' client added at ' + req.connection.remoteAddress);
-
     // Variables needed by this object
     this.id = id;
-    this.ws = ws;
+    this.ws;
     this.runningAverage = 0;
     const powerHistory = [];
 
-    // WS message handler
-    ws.on('message', (message) => {
+    const messageHandler = (message) => {
         const parsed = JSON.parse(message);
         if (!parsed) return;
 
@@ -166,7 +170,16 @@ function pcAudience(ws, req, configTracker, id)
                 powerHistory.splice(0);
             }
         }
-    });
+    };
+
+    // Resets this audience member's websocket
+    this.initWS = function(ws, req)
+    {
+        const isNew = !!this.ws;
+        console.log((new Date()) + ` client ${id} ${isNew ? 're' : ''}added at ` + req.connection.remoteAddress);
+        this.ws = ws;
+        this.ws.on('message', messageHandler);
+    };
 
     // Sends a note to the client to acknowledge its id
     this.identify = function(idIn)
@@ -179,5 +192,8 @@ function pcAudience(ws, req, configTracker, id)
                 pitches: configTracker.activePitches
             }
         }));
-    }
+    };
+
+    // Actually initializes everything
+    this.initWS(ws, req);
 };
