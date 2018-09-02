@@ -15,6 +15,12 @@ var powerInterval;
 // DOM elements
 var stageTwo = document.getElementById("stage-two");
 
+var actionInterval = window.setInterval(function()
+{
+    if (!document.getElementById("action-slider")) return window.clearInterval(actionInterval);
+    document.getElementById("action-slider").value = document.getElementById("action-slider").value - 0.005;
+}, 200)
+
 socket.onmessage = function (message)
 {
     message = JSON.parse(message.data);
