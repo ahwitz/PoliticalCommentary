@@ -12,14 +12,17 @@ var socket = new WebSocket(url, 'pc-audience');
 // Other things set on the 'accept' message initialization
 var powerInterval;
 
-// DOM elements
-var stageTwo = document.getElementById("stage-two");
-
 var actionInterval = window.setInterval(function()
 {
     if (!document.getElementById("action-slider")) return window.clearInterval(actionInterval);
     document.getElementById("action-slider").value = document.getElementById("action-slider").value - 0.005;
 }, 200)
+
+function setVisible(id)
+{
+    document.querySelector(".index.visible").classList.remove("visible");
+    document.getElementById(id).classList.add('visible');
+}
 
 socket.onmessage = function (message)
 {
@@ -28,14 +31,14 @@ socket.onmessage = function (message)
     // Set up message sent by server
     if (message.type === 'accept')
     {
-        stageTwo.classList.remove("loading");
-
         pcID = message.data.id;
         docCookies.setItem("pcid", pcID);
 
         powerInterval = window.setInterval(pcSynth.updatePower.bind(pcSynth), 1000);
         if (message.data.pitches && message.data.pitches.length > 0)
             pcSynth.setPitches(message.data.pitches);
+
+        setVisible("s2");
     }
     if (message.type === 'pitches')
     {
@@ -47,10 +50,10 @@ socket.onmessage = function (message)
 socket.onclose = function ()
 {
     // If the `accept` message was never sent, this is quick
-    if (!pcID) return document.getElementById("loading-message").innerHTML = "The performance has not yet started.";
+    if (!pcID) return;
 
     // Otherwise:
     window.clearInterval(powerInterval);
     pcSynth.end();
-    stageTwo.innerHTML = "The performance is complete.";
+    setVisible("c");
 }

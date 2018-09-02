@@ -1,4 +1,12 @@
-#stage-two.loading #loading-message {
+.index {
+	display: none;
+}
+
+.index.visible {
+	display: block;
+}
+
+#ns {
     margin: 1em;
     font-weight: bold;
     font-size: 1.2em;
@@ -11,3 +19,4 @@
 #stage-two:not(.loading) #loading-message {
     display: none;
 }
+
