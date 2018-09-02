@@ -11,7 +11,7 @@ function pitchController(synthRef)
     var maxDuration = 6;
 
     var minSilenceDuration = 2;
-    var maxSilenceDuration = 4;
+    var maxSilenceDuration = 3;
 
     // WebAudio stuff
     this.osc;
@@ -37,8 +37,10 @@ function pitchController(synthRef)
 
     this.setPitch = function(pitch)
     {
+        // If pitch was cleared, end
         if (!pitch)
         {
+            // (and stop/delete oscillator if it exists)
             if (this.osc)
             {
                 this.osc.stop();
@@ -48,6 +50,11 @@ function pitchController(synthRef)
             return;
         }
 
+        // If we're not changing, end it here
+        var intPitch = parseInt(pitch, 10);
+        if (intPitch === this.centralPitch) return;
+
+        // Create oscillator if necessary
         if (!this.osc)
         {
             this.osc = this.context.createOscillator();
@@ -56,7 +63,8 @@ function pitchController(synthRef)
             this.osc.start();
         }
 
-        this.centralPitch = parseInt(pitch, 10);
+        // Cache the pitch, start the process
+        this.centralPitch = intPitch;
         this.playPitch();
     };
 
@@ -68,25 +76,28 @@ function pitchController(synthRef)
         var actionValue = 1 - this.synth.getActionValue();
         var orderValue = (this.synth.getOrderValue() + 1) / 2;
 
-        var localDurationBase = ((maxDuration - minDuration) * actionValue);
-        var localPitchDifference = ((maxPitchDifference - minPitchDifference) * orderValue);
+        var localDurationBase = (maxDuration - minDuration) * actionValue;
+        var localPitchDifference = (maxPitchDifference - minPitchDifference) * orderValue;
+        var localGainBase = (maxMaxGainVolume - minMaxGainVolume) * actionValue;
 
-        // Generate the config object for the current pitch
+        // Generate local values
         var duration = minDuration + (Math.random() * localDurationBase);
         var pitch = this.centralPitch + minPitchDifference + ((Math.random() - 0.5) * localPitchDifference);
+        var loudest = minMaxGainVolume + (Math.random() * localGainBase);
 
+        // Make the config obj
         this.pitchObj = {
-            loudest: Math.random() * maxMaxGainVolume,
-            pitch: pitch,
+            loudest: loudest,
             duration: duration,
             breakpoint: duration / 2,
             start: (new Date()).getTime()
         };
 
+        // Set the pitch
         this.osc.frequency.value = pitch;
 
         console.log("Creating a new pitch: loudest gain " + this.pitchObj.loudest + "; central pitch " + this.centralPitch +
-            "; random pitch " + this.pitchObj.pitch + "; duration " + this.pitchObj.duration);
+            "; random pitch " + pitch + "; duration " + this.pitchObj.duration);
 
         // Set the interval to update the pitch volume
         this.pitchInterval = window.setInterval(this.updatePitch.bind(this), 10);
@@ -97,21 +108,21 @@ function pitchController(synthRef)
 
     this.updatePitch = function()
     {
+        // Get the amount we've elapsed so far
         var timeElapsed = ((new Date()).getTime() - this.pitchObj.start) / 1000;
         var percentElapsed = timeElapsed / this.pitchObj.duration;
 
         var multiplier;
+        // If we're before the breakpoint, we want to get louder up to there
         if (timeElapsed <= this.pitchObj.breakpoint)
-        {
             multiplier = (percentElapsed * 2);
-        }
-        else
-        {
-            multiplier = (2 - (percentElapsed * 2));
-        }
 
-        var gainVal = this.pitchObj.loudest * multiplier;
-        this.gain.gain.value = gainVal;
+        // Otherwise get softer
+        else
+            multiplier = (2 - (percentElapsed * 2));
+
+        // Set gain
+        this.gain.gain.value = this.pitchObj.loudest * multiplier;
     };
 
     this.endPitch = function()
@@ -119,11 +130,11 @@ function pitchController(synthRef)
         // Calculate how long we'll be silent for
         var actionValue = 1 - this.synth.getActionValue();
         var localSilenceBase = ((maxSilenceDuration - minSilenceDuration) * actionValue);
-
         var silenceDuration = minSilenceDuration + (Math.random() + localSilenceBase);
 
         console.log("Ending pitch; silent for " + silenceDuration);
 
+        // Reset timers
         window.clearInterval(this.pitchInterval);
         window.setTimeout(this.playPitch.bind(this), silenceDuration * 1000);
     };
@@ -149,12 +160,12 @@ function PCSynth ()
 
     this.getActionValue = function()
     {
-        return document.getElementById("action-slider").value;
+        return parseInt(document.getElementById("action-slider").value, 10);
     };
 
     this.getOrderValue = function()
     {
-        return document.getElementById("order-slider").value;
+        return parseInt(document.getElementById("order-slider").value, 10);
     };
 
     this.updatePower = function()
