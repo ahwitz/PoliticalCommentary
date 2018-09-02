@@ -2,10 +2,7 @@ var pcID;
 
 // If there's an ID already set, get it; otherwise, we'll get it later
 if (docCookies.getItem("pcid"))
-{
     pcID = docCookies.getItem("pcid");
-    console.log("already set to", pcID);
-}
     
 // Connect
 var url = "ws://" + window.location.host;

@@ -71,7 +71,7 @@ module.exports.WSServer = function(url, httpServer)
             if (performerConnection) return ws.close();
             
             // Otherwise save
-            configTracker = new ConfigTracker(clientConnections);
+            if (!configTracker) configTracker = new ConfigTracker(clientConnections);
             performerConnection = new pcPerformer(ws, req, configTracker);
             configTracker.setPerformer(performerConnection);
 
@@ -86,7 +86,7 @@ module.exports.WSServer = function(url, httpServer)
             let pcID;
 
             // If we're coming in with a pcID, save it
-            if (req.headers.cookie.indexOf("pcid") > -1)
+            if (req.headers.cookie && req.headers.cookie.indexOf("pcid") > -1)
             {
                 pcID = req.headers.cookie.replace(new RegExp('(?:(?:^|.*;)\\s*pcid\\s*\\=\\s*([^;]*).*$)|^.*$'), '$1');
 
