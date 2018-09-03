@@ -9,6 +9,8 @@ const utils = require('./utils');
 
 function ConfigTracker(clientConnections)
 {
+    let programTotal = 0;
+
     this.activePitches = [];
     this.performerConn;
     this.clientConnections = clientConnections;
@@ -20,7 +22,6 @@ function ConfigTracker(clientConnections)
         if (!this.performerConn || this.performerConn.ws.readyState === 3) return;
 
         let clients = {};
-        let programTotal = 0;
         for (const id in this.clientConnections)
         {
             const client = this.clientConnections[id];
@@ -35,7 +36,7 @@ function ConfigTracker(clientConnections)
                 programTotal
             }
         }));
-    }
+    };
 
     this.updatePitchesTo = function(pitches)
     {
@@ -49,7 +50,28 @@ function ConfigTracker(clientConnections)
                 data: this.activePitches
             }));
         }
-    }
+    };
+
+    this.enterStageThree = function()
+    {
+        console.log("Entering stage three");
+        const orderWon = programTotal < 0;
+        
+        for (const id in this.clientConnections)
+        {
+            const client = this.clientConnections[id];
+            const clientWasOrder = client.runningAverage < 0;
+
+            client.ws.send(JSON.stringify({
+                type: 'stage',
+                data: {
+                    stage: 3,
+                    orderWon,
+                    clientWon: clientWasOrder === orderWon
+                }
+            }));
+        }
+    };
 }
 
 module.exports.WSServer = function(url, httpServer)
@@ -138,6 +160,13 @@ function pcPerformer(ws, req, configTracker)
         if (parsed.type === 'pitches')
         {
             configTracker.updatePitchesTo(parsed.data);
+        }
+
+        else if (parsed.type === 'stage')
+        {
+            const stageNumber = parsed.data;
+            if (stageNumber === 3)
+                configTracker.enterStageThree();
         }
     });
 };

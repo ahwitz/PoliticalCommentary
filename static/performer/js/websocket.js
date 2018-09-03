@@ -41,3 +41,11 @@ for (var iIdx = 0; iIdx < inputs.length; iIdx++)
         }));
     });
 }
+
+document.getElementById("stage-three").addEventListener('click', function()
+{
+    socket.send(JSON.stringify({
+        type: 'stage',
+        data: 3
+    }));
+});

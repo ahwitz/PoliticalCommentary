@@ -12,12 +12,14 @@ var socket = new WebSocket(url, 'pc-audience');
 // Other things set on the 'accept' message initialization
 var powerInterval;
 
+// Set it up so that the action slider goes down when it's not touched
 var actionInterval = window.setInterval(function()
 {
     if (!document.getElementById("action-slider")) return window.clearInterval(actionInterval);
     document.getElementById("action-slider").value = document.getElementById("action-slider").value - 0.005;
 }, 200)
 
+// Sets a given root-level div to be visible
 function setVisible(id)
 {
     document.querySelector(".index.visible").classList.remove("visible");
@@ -40,9 +42,15 @@ socket.onmessage = function (message)
 
         setVisible("s2");
     }
-    if (message.type === 'pitches')
+
+    else if (message.type === 'pitches')
     {
         pcSynth.setPitches(message.data);
+    }
+
+    else if (message.type === 'stage')
+    {
+        console.log(message.data);
     }
 };
 
