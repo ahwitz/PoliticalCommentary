@@ -72,7 +72,7 @@ function pitchController(synthRef)
 
     this.playPitch = function()
     {
-        if (!this.osc || !this.osc.frequency.value) return;
+        if (!this.osc || !this.osc.frequency || !this.osc.frequency.setValueAtTime) return;
 
         // Get the slider values, out of 1
         var actionValue = 1 - this.synth.getActionValue();
@@ -96,7 +96,7 @@ function pitchController(synthRef)
         };
 
         // Set the pitch
-        this.osc.frequency.value = pitch;
+        this.osc.frequency.setValueAtTime(pitch, this.context.currentTime);
 
         console.log("Creating a new pitch: loudest gain " + this.pitchObj.loudest + "; central pitch " + this.centralPitch +
             "; random pitch " + pitch + "; duration " + this.pitchObj.duration);
@@ -124,7 +124,7 @@ function pitchController(synthRef)
             multiplier = (2 - (percentElapsed * 2));
 
         // Set gain
-        this.gain.gain.value = this.pitchObj.loudest * multiplier;
+        this.gain.gain.setValueAtTime(this.pitchObj.loudest * multiplier, this.context.currentTime);
     };
 
     this.endPitch = function()
