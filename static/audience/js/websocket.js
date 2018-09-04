@@ -68,6 +68,7 @@ socket.onmessage = function (message)
             setVisible("s3" + firstLetter + secondLetter);
 
             window.clearInterval(powerInterval);
+            pcSynth.end();
         }
     }
 };

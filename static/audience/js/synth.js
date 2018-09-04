@@ -27,12 +27,16 @@ function pitchController(synthRef)
     // Pitch-playing information
     this.centralPitch;
     this.pitchInterval;
+    this.soundTimeout;
     this.pitchObj;
 
     this.end = function()
     {
         if (this.osc)
+        {
             this.osc.stop();
+            delete this.osc;
+        }
     };
 
     this.setPitch = function(pitch)
@@ -41,12 +45,7 @@ function pitchController(synthRef)
         if (!pitch)
         {
             // (and stop/delete oscillator if it exists)
-            if (this.osc)
-            {
-                this.osc.stop();
-                delete this.osc;
-            }
-
+            this.end();
             return;
         }
 
@@ -105,7 +104,7 @@ function pitchController(synthRef)
         this.pitchInterval = window.setInterval(this.updatePitch.bind(this), 10);
 
         // Set the timeout to turn the interval off (technically unnecessary as it could behandled between playP and updateP)
-        window.setTimeout(this.endPitch.bind(this), this.pitchObj.duration * 1000);
+        this.soundTimeout = window.setTimeout(this.endPitch.bind(this), this.pitchObj.duration * 1000);
     };
 
     this.updatePitch = function()
@@ -138,7 +137,7 @@ function pitchController(synthRef)
 
         // Reset timers
         window.clearInterval(this.pitchInterval);
-        window.setTimeout(this.playPitch.bind(this), silenceDuration * 1000);
+        this.soundTimeout = window.setTimeout(this.playPitch.bind(this), silenceDuration * 1000);
     };
 }
 
@@ -156,6 +155,8 @@ function PCSynth ()
     {
         for (var i = 0; i < 4; i++)
         {
+            window.clearInterval(this.controllers[i].pitchInterval);
+            window.clearTimeout(this.controllers[i].soundTimeout);
             this.controllers[i].end();
         }
     };
