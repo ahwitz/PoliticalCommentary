@@ -12,6 +12,7 @@ function ConfigTracker(clientConnections)
     let programTotal = 0;
 
     this.activePitches = [];
+    this.currentStage = 0;
     this.performerConn;
     this.clientConnections = clientConnections;
 
@@ -41,8 +42,9 @@ function ConfigTracker(clientConnections)
     this.updatePitchesTo = function(pitches)
     {
         this.activePitches = pitches;
-        for (var client of clientConnections)
+        for (const id in this.clientConnections)
         {
+            const client = this.clientConnections[id];
             if (client.ws.readyState === 3) continue;
 
             client.ws.send(JSON.stringify({
@@ -52,25 +54,48 @@ function ConfigTracker(clientConnections)
         }
     };
 
-    this.enterStageThree = function()
+    this.sendCurrentStageMessage = function(client)
     {
-        console.log("Entering stage three");
-        const orderWon = programTotal < 0;
-        
-        for (const id in this.clientConnections)
+        // If we're sending stage 2, send out the initial stage message and a pitches message
+        if (this.stage === 2)
         {
-            const client = this.clientConnections[id];
+            client.ws.send(JSON.stringify({
+                type: 'stage',
+                data: {
+                    stage: this.stage
+                }
+            }));
+
+            client.ws.send(JSON.stringify({
+                type: 'pitches',
+                data: this.activePitches
+            }));
+        }
+
+        // If it's 3, calculate whether the client won and let them know
+        if (this.stage === 3)
+        {
+            const orderWon = programTotal < 0;
             const clientWasOrder = client.runningAverage < 0;
 
             client.ws.send(JSON.stringify({
                 type: 'stage',
                 data: {
-                    stage: 3,
+                    stage: this.stage,
                     orderWon,
                     clientWon: clientWasOrder === orderWon
                 }
             }));
         }
+    };
+
+    this.enterStage = function(which)
+    {
+        console.log("Entering stage " + which);
+        this.stage = which;
+
+        for (const id in this.clientConnections)
+            this.sendCurrentStageMessage(this.clientConnections[id]);
     };
 }
 
@@ -153,6 +178,8 @@ function pcPerformer(ws, req, configTracker)
     console.log((new Date()) + ' performer acknowledged at ' + req.connection.remoteAddress);
     this.ws = ws;
 
+    configTracker.enterStage(2);
+
     ws.on('message', (message) => {
         const parsed = JSON.parse(message);
         if (!parsed) return;
@@ -164,9 +191,7 @@ function pcPerformer(ws, req, configTracker)
 
         else if (parsed.type === 'stage')
         {
-            const stageNumber = parsed.data;
-            if (stageNumber === 3)
-                configTracker.enterStageThree();
+           configTracker.enterStage(parsed.data);
         }
     });
 };
@@ -217,10 +242,11 @@ function pcAudience(ws, req, configTracker, id)
         this.ws.send(JSON.stringify({
             type: 'accept',
             data: {
-                id: idIn,
-                pitches: configTracker.activePitches
+                id: idIn
             }
         }));
+
+        configTracker.sendCurrentStageMessage(this);
     };
 
     // Actually initializes everything

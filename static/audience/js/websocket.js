@@ -26,6 +26,11 @@ function setVisible(id)
     document.getElementById(id).classList.add('visible');
 }
 
+function getVisible()
+{
+    return document.querySelector(".index.visible").getAttribute('id');
+}
+
 socket.onmessage = function (message)
 {
     message = JSON.parse(message.data);
@@ -35,22 +40,35 @@ socket.onmessage = function (message)
     {
         pcID = message.data.id;
         docCookies.setItem("pcid", pcID);
-
-        powerInterval = window.setInterval(pcSynth.updatePower.bind(pcSynth), 1000);
-        if (message.data.pitches && message.data.pitches.length > 0)
-            pcSynth.setPitches(message.data.pitches);
-
-        setVisible("s2");
     }
 
     else if (message.type === 'pitches')
     {
-        pcSynth.setPitches(message.data);
+        // If we have pitches, try to set them
+        if (message.data && message.data.length > 0)
+            pcSynth.setPitches(message.data);
     }
 
     else if (message.type === 'stage')
     {
-        console.log(message.data);
+        if (message.data.stage === 2)
+        {
+            // If the current stage isn't 2, make it
+            if (!(getVisible() === 's2')) setVisible("s2");
+
+            // If the power interval isn't set, set it
+            if (!powerInterval) powerInterval = window.setInterval(pcSynth.updatePower.bind(pcSynth), 1000);
+        }
+
+        if (message.data.stage === 3)
+        {
+            var firstLetter = message.data.orderWon ? 'o' : 'a';
+            var secondLetter = message.data.clientWon ? 'w' : 'l';
+
+            setVisible("s3" + firstLetter + secondLetter);
+
+            window.clearInterval(powerInterval);
+        }
     }
 };
 
