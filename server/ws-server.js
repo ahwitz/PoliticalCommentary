@@ -114,12 +114,20 @@ module.exports.WSServer = function(url, httpServer)
     wsServer.on('connection', (ws, req) => {
         if (ws.protocol === 'pc-performer')
         {
+            // Track if this is a new performance
+            let isNew = true;
+
             // If the performer already exists, close this
             if (performerConnection) return ws.close();
             
             // Otherwise save
             if (!configTracker) configTracker = new ConfigTracker(clientConnections);
-            performerConnection = new pcPerformer(ws, req, configTracker);
+
+            // If it already existed, set isNew
+            else isNew = configTracker.currentStage > 0;
+
+            // Initialize the performerConn
+            performerConnection = new pcPerformer(ws, req, configTracker, isNew);
             configTracker.setPerformer(performerConnection);
 
             // If a close comes through for this, reset it
@@ -173,12 +181,12 @@ module.exports.WSServer = function(url, httpServer)
     });
 };
 
-function pcPerformer(ws, req, configTracker)
+function pcPerformer(ws, req, configTracker, isNew)
 {
     console.log((new Date()) + ' performer acknowledged at ' + req.connection.remoteAddress);
     this.ws = ws;
 
-    configTracker.enterStage(2);
+    if (isNew) configTracker.enterStage(2);
 
     ws.on('message', (message) => {
         const parsed = JSON.parse(message);
